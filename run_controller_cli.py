@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import logging
 import os
+import base64
 
 from aioconsole import ainput
 
@@ -16,6 +17,8 @@ from joycontrol.memory import FlashMemory
 from joycontrol.protocol import controller_protocol_factory
 from joycontrol.server import create_hid_server
 from joycontrol.nfc_tag import NFCTag
+
+from joycontrol.ScriptRunner import ScriptRunner
 
 logger = logging.getLogger(__name__)
 
@@ -275,6 +278,26 @@ def _register_commands_with_controller_state(controller_state, cli):
 
     cli.add_command(nfc.__name__, nfc)
 
+    async def nfc_raw(*args):
+        """
+        nfc_raw - Sets nfc content
+
+        Usage:
+            nfc_raw <base64>          Set controller state NFC content from base64 encoded string
+        """
+        #logger.error('NFC Support was removed from joycontrol - see https://github.com/mart1nro/joycontrol/issues/80')
+        if controller_state.get_controller() == Controller.JOYCON_L:
+            raise ValueError('NFC content cannot be set for JOYCON_L')
+        elif not args:
+            raise ValueError('"nfc_raw" command requires base 64 encoded bytes of an nfc dump')
+        else:
+            data = base64.b64decode(args[0])
+            tag = NFCTag(data=data)
+            controller_state.set_nfc(tag)
+            print("added nfc content")
+
+    cli.add_command(nfc_raw.__name__, nfc_raw)
+
     async def pause(*args):
         """
         Pause regular input
@@ -290,6 +313,25 @@ def _register_commands_with_controller_state(controller_state, cli):
         controller_state._protocol.unpause()
 
     cli.add_command(unpause.__name__, unpause)
+
+    async def execute(*args):
+        script_runner = ScriptRunner(controller_state)
+        if args[0] == "-L":
+            print("looping")
+            script_runner.is_looping = True
+            script_file_name = os.path.expanduser(args[1])
+        else:
+            print("not looping")
+            script_runner.is_looping = False
+            script_file_name = os.path.expanduser(args[0])
+
+        if os.path.exists(script_file_name):
+            await script_runner.execute_script_file(script_file_name)
+        else:
+            logger.error(f'No such script {script_file_name}')
+
+    cli.add_command(execute.__name__, execute)
+
 
 async def _main(args):
     # Get controller name to emulate from arguments
