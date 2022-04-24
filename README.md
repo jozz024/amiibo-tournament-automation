@@ -41,7 +41,8 @@ sudo pip3 install aioconsole hid crc8
 ## Tournament Scripts
 - These are files required to do the automation.
 - there are 9 files you have to make:
-  ```start_game: this file starts the game and brings you to the main menu. you want it to press the home button, 2 A button presses to start the game, sleep for as long as it takes to get to lifelight from boot, and then 2 more A button presses to advance to the main menu
+  ```
+  start_game: this file starts the game and brings you to the main menu. you want it to press the home button, 2 A button presses to start the game, sleep for as long as it takes to get to lifelight from boot, and then 2 more A button presses to advance to the main menu
 
   smash_menu: this is the script that advances you to the character select screen. its basicallly just 3 A button presses spaced out differently depending on the time it takes to get to the next menu from that menu
 
@@ -63,8 +64,10 @@ sudo pip3 install aioconsole hid crc8
   ```Button:Length to be held in ms```
 
 - an example:
-  ```Left:2000
-  :4000```
+  ```
+  Left:2000
+  :4000
+  ```
 
 - this would have left go down for 2 seconds, and then no input for 4 seconds
 
