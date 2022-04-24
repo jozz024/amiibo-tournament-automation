@@ -137,3 +137,7 @@ dmypy.json
 
 # binarys or dumps
 *.bin
+
+tournament-scripts/
+ssbu.py
+test.py

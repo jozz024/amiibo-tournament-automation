@@ -1,29 +1,25 @@
-# joycontrol
+# amiibo-tournament-automation
 
-Branch: master->amiibo_edits
+Run automated amiibo tournaments for SSBU.
+To be used in conjunction with [match_end](https://github.com/jozz024/match_end).
 
-Emulate Nintendo Switch Controllers over Bluetooth.
-
-Tested on Raspberry 4B Raspbian, should work on 3B+ too and anything that can do the setup.
 
 ## Features
-Emulation of JOYCON_R, JOYCON_L and PRO_CONTROLLER. Able to send:
-- button commands
-- stick state
-- nfc for amiibo read & owner registration
+- Automatic amiibo loading
+- Automatic menu traversing
+- Automatic score reporting
+- Automatic result sending
 
 ## Installation
 - Install dependencies  
-  Raspbian:
 ```bash
 sudo apt install python3-dbus libhidapi-hidraw0 libbluetooth-dev bluez
 ```
-  Python: (a setup.py is present but not yet up to date)  
+  Python:
   Note that pip here _has_ to be run as root, as otherwise the packages are not available to the root user.
 ```bash
 sudo pip3 install aioconsole hid crc8
 ```
- If you are unsure if the packages are properly installed, try running `sudo python3` and import each using `import package_name`.
 
 - setup bluetooth
   - [I shouldn't have to say this, but] make sure you have a working Bluetooth adapter\
@@ -41,75 +37,48 @@ sudo pip3 install aioconsole hid crc8
   ```
   - see [Issue #4](https://github.com/Poohl/joycontrol/issues/4) if despite that the switch doesn't connect or disconnects randomly.
 
-## Command line interface example
-There is a simple CLI (`sudo python3 run_controller_cli.py`) provided with this app. Startup-options are:
-```
-usage: run_controller_cli.py [-h] [-l LOG] [-d DEVICE_ID]
-                             [--spi_flash SPI_FLASH] [-r RECONNECT_BT_ADDR]
-                             [--nfc NFC]
-                             controller
 
-positional arguments:
-  controller            JOYCON_R, JOYCON_L or PRO_CONTROLLER
+## Tournament Scripts
+- These are files required to do the automation.
+- there are 9 files you have to make:
+  ```start_game: this file starts the game and brings you to the main menu. you want it to press the home button, 2 A button presses to start the game, sleep for as long as it takes to get to lifelight from boot, and then 2 more A button presses to advance to the main menu
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -l LOG, --log LOG     BT-communication logfile output
-  -d DEVICE_ID, --device_id DEVICE_ID
-                        not fully working yet, the BT-adapter to use
-  --spi_flash SPI_FLASH
-                        controller SPI-memory dump to use
-  -r RECONNECT_BT_ADDR, --reconnect_bt_addr RECONNECT_BT_ADDR
-                        The Switch console Bluetooth address (or "auto" for
-                        automatic detection), for reconnecting as an already
-                        paired controller.
-  --nfc NFC             amiibo dump placed on the controller. Equivalent to
-                        the nfc command.
+  smash_menu: this is the script that advances you to the character select screen. its basicallly just 3 A button presses spaced out differently depending on the time it takes to get to the next menu from that menu
 
-```
+  smash_menu_after_match: this is the same concept as smash menu, but it removes the first A button press because you dont need once you exit the amiibo save screen.
 
-To use the script:
-- start it (this is a minimal example)
+  load_fp1: this loads the first amiibo after you get to the css. it consists of one down input (held for a bit to get all the way down there), and 2 A button inputs to get to the amiibo scan menu
+
+  load_fp2: this loads the second amiibo. it consists of a right input, and 1 a input to get to the amiibo scan menu
+
+  start_match: literally just the plus button
+
+  on_match_end: gets us from the win screen to the stats page, so 2 A presses.
+
+  after_match: this one is the longest file of them all, it takes us from the stats page to the menu before rule select. it consists of: 2 A button inputs, a B input held for as long as it takes to exit the menu, 2 B button presses, a Right button press, and an A button press
+
+  exit_to_home_and_close_game: this one exits the game. it consists of 1 Home button press, 1 x button press, and one A button press.```
+
+- these files should be formatted as follows:
+  ```Button:Length to be held in ms```
+
+- an example:
+  ```Left:2000
+  :4000```
+
+- this would have left go down for 2 seconds, and then no input for 4 seconds
+
+## To use the script:
+- Put the amiibo bin files from submissionapp in the `tourbins` folder.
+- start it
 ```bash
-sudo python3 run_controller_cli.py PRO_CONTROLLER
+sudo python3 tourrun.py
 ```
-- The cli does sanity checks on startup, you might get promps telling you they failed. Check the command-line options and your setup in this case. (Note: not the logging messages). You can however still try to proceed, sometimes it works despite the warnings.
+- If you don't have a config.json present, it will make one and prompt you to fill it out on boot.
 
-- Afterwards a PRO_CONTROLLER instance waiting for the Switch to connect is created.
+- Afterwards, it will ask you for the tournament url (the last part of the url, so if it was `challonge.com/amiibos`, it would be `amiibos`)
 
-- If you didn't pass the `-r` option, Open the "Change Grip/Order" menu of the Switch and wait for it to pair.
-
-- If you already connected the emulated controller once, you can use the reconnect option of the script (`-r <Switch Bluetooth Mac address>`). Don't open the "Change Grip/Order" menu in this case, just make sure the switch is turned on. You can find out a paired mac address using the `bluetoothctl paired-devices` system command or pass `-r auto` as address for automatic detection.
-
-- After connecting, a command line interface is opened.  
-  Note: Press \<enter> if you don't see a prompt.
-
-  Call "help" to see a list of available commands.
-
-## API
-
-See the `run_controller_cli.py` for an example how to use the API. A minimal example:
-
-```python
-from joycontrol.protocol import controller_protocol_factory
-from joycontrol.server import create_hid_server
-from joycontrol.controller import Controller
-
-# the type of controller to create
-controller = Controller.PRO_CONTROLLER # or JOYCON_L or JOYCON_R
-# a callback to create the corresponding protocol once a connection is established
-factory = controller_protocol_factory(controller)
-# start the emulated controller
-transport, protocol = await create_hid_server(factory)
-# get a reference to the state beeing emulated.
-controller_state = protocol.get_controller_state()
-# wait for input to be accepted
-await controller_state.connect()
-# some sample input
-controller_state.button_state.set_button('a', True)
-# wait for it to be sent at least once
-await controller_state.send()
-```
+- After that, the tournament will be running!
 
 ## Issues
 - Some bluetooth adapters seem to cause disconnects for reasons unknown, try to use an usb adapter or a raspi instead.
