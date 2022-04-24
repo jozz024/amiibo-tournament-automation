@@ -2,7 +2,7 @@
 
 Run automated amiibo tournaments for SSBU.
 To be used in conjunction with [match_end](https://github.com/jozz024/match_end).
-
+This requires you have ran joycontrol at least once, so make sure to do that before doing this
 
 ## Features
 - Automatic amiibo loading
@@ -69,7 +69,7 @@ sudo pip3 install aioconsole hid crc8
   :4000
   ```
 
-- this would have left go down for 2 seconds, and then no input for 4 seconds
+- this would have the left button be held for 2 seconds, and then no input for 4 seconds
 
 ## To use the script:
 - Put the amiibo bin files from submissionapp in the `tourbins` folder.
