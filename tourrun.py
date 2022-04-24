@@ -24,7 +24,7 @@ if not os.path.exists("config.json"):
     config["challonge_username"] = input("Please input your challonge username.\n")
     config["challonge_api_key"] = input("Please input your challonge api key.\n")
 
-    with open("config.json") as cfg:
+    with open("config.json", "w+") as cfg:
         json.dump(config, cfg)
 
 with open("config.json") as cfg:
