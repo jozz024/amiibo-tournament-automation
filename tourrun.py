@@ -97,11 +97,11 @@ async def load_match(controller_state, game_start, fp1_tag, fp2_tag):
         await execute(controller_state, "tournament-scripts/smash_menu_after_match")
     await execute(controller_state, "tournament-scripts/load_fp1")
     controller_state.set_nfc(fp1_tag)
-    await asyncio.sleep(3)
+    await asyncio.sleep(5)
     controller_state.set_nfc(None)
     await execute(controller_state, "tournament-scripts/load_fp2")
     controller_state.set_nfc(fp2_tag)
-    await asyncio.sleep(3)
+    await asyncio.sleep(5)
     controller_state.set_nfc(None)
     await execute(controller_state, "tournament-scripts/start_match")
 
@@ -182,7 +182,10 @@ async def main(tour: Tournament):
                             s.close()
                             await main(tour)
                     except:
-                        print("Failed decoding data!")
+                        s.shutdown(socket.SHUT_RDWR)
+                        s.close()
+                        await load_match(controller_state, True, fp1_tag, fp2_tag)
+                        continue
 
                 score = w_l_str
                 print(score)
@@ -208,7 +211,7 @@ async def main(tour: Tournament):
                     loser_name = loser[0].strip(" ")
                     loser_character = loser[1].strip(" ")
                 await asyncio.sleep(5)
-                await button_push(controller_state, "capture", sec=0.12)
+                await button_push(controller_state, "capture", sec=0.15)
                 await execute(controller_state, "tournament-scripts/on_match_end")
                 await execute(controller_state, "tournament-scripts/after_match")
                 await webhk.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
