@@ -36,6 +36,11 @@ bindict = {}
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_connected = False
 
+async def restart_match(controller_state, fp1_tag, fp2_tag):
+    global s
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    await load_match(controller_state, True, fp1_tag, fp2_tag)
+
 def get_latest_image():
     ftp = ftplib.FTP()
     ftp.connect(config["ip"], 5000)
@@ -178,13 +183,10 @@ async def main(tour: Tournament):
                             w_l_str = data.decode().split(".")[1].lstrip()
                             break
                         if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
-                            s.shutdown(socket.SHUT_RDWR)
-                            s.close()
-                            await main(tour)
+                            await restart_match(controller_state, fp1_tag, fp2_tag)
+                            continue
                     except:
-                        s.shutdown(socket.SHUT_RDWR)
-                        s.close()
-                        await load_match(controller_state, True, fp1_tag, fp2_tag)
+                        await restart_match(controller_state, fp1_tag, fp2_tag)
                         continue
 
                 score = w_l_str
