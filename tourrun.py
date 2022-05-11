@@ -166,6 +166,7 @@ async def main(tour: Tournament):
                 }
                 p1_filepath = bindict[p1]
                 p2_filepath = bindict[p2]
+                tour.mark_in_progress(tour.matches[match_num]["id"])
                 with open(os.path.join("tourbins", p1_filepath + ".bin"), "rb") as fp1_file:
                     fp1_hex = fp1_file.read()
 
@@ -174,7 +175,6 @@ async def main(tour: Tournament):
                 fp1_tag = NFCTag(data=fp1_hex, source=p1_filepath, mutable=True)
                 fp2_tag = NFCTag(data=fp2_hex, source=p2_filepath, mutable=True)
                 await load_match(controller_state, game_start, fp1_tag, fp2_tag)
-                tour.mark_in_progress(tour.matches[match_num]["id"])
                 game_start = False
                 while True:
                     data = s.recv(1024)

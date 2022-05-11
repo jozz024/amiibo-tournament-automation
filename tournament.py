@@ -39,6 +39,12 @@ class Tournament():
     def get_user_from_id(self, id):
         return challonge.participants.show(self.tournament["id"], id)["name"]
 
+    def get_user_from_group_player_id(self, id):
+        users = challonge.participants.index(self.tournament["id"])
+        for participants in users:
+            if participants["group_player_ids"][0] == id:
+                return participants["name"]
+
     def end(self):
         challonge.tournaments.finalize(self.tournament["id"])
 
