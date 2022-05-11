@@ -7,6 +7,7 @@ class Tournament():
         # Retrieve a tournament by its id (or its url).
         self.tournament = challonge.tournaments.show(url)
         self.matches = challonge.matches.index(self.tournament["id"])
+        self.participants = challonge.participants.index(self.tournament["id"])
 
     def get_all_participants(self):
         # Retrieve the participants for a given tournament.
@@ -40,8 +41,7 @@ class Tournament():
         return challonge.participants.show(self.tournament["id"], id)["name"]
 
     def get_user_from_group_player_id(self, id):
-        users = challonge.participants.index(self.tournament["id"])
-        for participants in users:
+        for participants in self.participants:
             if participants["group_player_ids"][0] == id:
                 return participants["name"]
 
