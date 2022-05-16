@@ -25,12 +25,14 @@ if not os.path.exists("config.json"):
     config["challonge_api_key"] = input("Please input your challonge api key.\n")
 
     with open("config.json", "w+") as cfg:
-        json.dump(config, cfg)
+        json.dump(config, cfg, indent=4)
 
 with open("config.json") as cfg:
     config: dict = json.load(cfg)
     if type(config["webhook_url"]) != list:
         config["webhook_url"] = [config["webhook_url"], ]
+    with open("config.json", "w+") as cfg:
+        json.dump(config, cfg, indent=4)
 
 ip = config["ip"]
 port = "6969"
@@ -77,10 +79,7 @@ def get_latest_image():
     latest_name = entries[0][0]
     filename = directory_to_grab + latest_name
     image = io.BytesIO(b"")
-    try:
-        ftp.retrbinary("RETR " + filename, image.write)
-    except ConnectionResetError:
-        ftp.retrbinary("RETR " + filename, image.write)
+    ftp.retrbinary("RETR " + filename, image.write)
     image.seek(0)
     return image
 
@@ -128,6 +127,7 @@ async def main(tour: Tournament):
     controller_state: ControllerState = protocol.get_controller_state()
     # wait for input to be accepted
     await controller_state.connect()
+    entries = []
     try:
         for files in os.listdir("./tourbins"):
             file = os.path.splitext(files)
@@ -139,6 +139,12 @@ async def main(tour: Tournament):
                 if lookfor in file[0]:
                     user, amiibo_name = file[0].split(lookfor, 1)
                     name = f"{user} - {chars}"
+                    while name in entries:
+                        if amiibo_name in name:
+                            name = name.replace(amiibo_name, amiibo_name + " - 2")
+                        else:
+                            name = f"{name} - {amiibo_name}"
+                    entries.append(name)
             try:
                 tour.add_participant(name)
             except:
@@ -221,7 +227,10 @@ async def main(tour: Tournament):
                 await execute(controller_state, "tournament-scripts/on_match_end")
                 await execute(controller_state, "tournament-scripts/after_match")
                 for webhooks in webhook_list:
-                    await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
+                    try:
+                        await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
+                    except ConnectionResetError:
+                        await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
                 await asyncio.sleep(12)
                 new_match = True
         except IndexError:
