@@ -29,6 +29,8 @@ if not os.path.exists("config.json"):
 
 with open("config.json") as cfg:
     config: dict = json.load(cfg)
+    if type(config["webhook_url"]) != list:
+        config["webhook_url"] = [config["webhook_url"], ]
 
 ip = config["ip"]
 port = "6969"
@@ -112,9 +114,9 @@ async def load_match(controller_state, game_start, fp1_tag, fp2_tag):
 
 async def main(tour: Tournament):
     global bindict
-
-    webhk = webhook.MatchResultWebhoook()
-    await webhk.set_webhook(config["webhook_url"], config["webhook_name"])
+    webhook_list = []
+    for urls in config["webhook_url"]:
+        webhook_list.append(webhook.MatchResultWebhoook(urls, config["webhook_name"]))
 
     # the type of controller to create
     controller = Controller.PRO_CONTROLLER # or JOYCON_L or JOYCON_R
@@ -156,6 +158,8 @@ async def main(tour: Tournament):
         tour.refresh_matches()
         try:
             if tour.matches[match_num]["state"] == "complete":
+                match_num += 1
+            elif tour.matches[match_num]["scores_csv"] != "":
                 match_num += 1
             else:
                 p1 = tour.get_user_from_id(tour.matches[match_num]["player1_id"])
@@ -216,7 +220,8 @@ async def main(tour: Tournament):
                 await button_push(controller_state, "capture", sec=0.15)
                 await execute(controller_state, "tournament-scripts/on_match_end")
                 await execute(controller_state, "tournament-scripts/after_match")
-                await webhk.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
+                for webhooks in webhook_list:
+                    await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
                 await asyncio.sleep(12)
                 new_match = True
         except IndexError:
