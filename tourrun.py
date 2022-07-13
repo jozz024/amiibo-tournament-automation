@@ -15,6 +15,7 @@ import ftplib
 import asyncio
 from joycontrol.nfc_tag import NFCTag
 import socket
+import csv
 
 if not os.path.exists("config.json"):
     config = {}
@@ -129,27 +130,31 @@ async def main(tour: Tournament):
     await controller_state.connect()
     entries = []
     try:
-        for files in os.listdir("./tourbins"):
-            file = os.path.splitext(files)
-            with open("character_names.txt") as chars:
-                character_names = chars.readlines()
-            for chars in character_names:
-                chars = chars.strip("\n")
-                lookfor = f"-{chars}-"
-                if lookfor in file[0]:
-                    user, amiibo_name = file[0].split(lookfor, 1)
-                    name = f"{user} - {chars}"
-                    while name in entries:
-                        if amiibo_name in name:
-                            name = name.replace(amiibo_name, amiibo_name + " - 2")
-                        else:
-                            name = f"{name} - {amiibo_name}"
-                    entries.append(name)
-            try:
-                tour.add_participant(name)
-            except:
-                pass
-            bindict[name] = file[0]
+        with open("entries.tsv") as fp:
+            # open the entry tsv submissionapp provides
+            entry_tsv = csv.reader(fp, delimiter = "\t")
+            for entry in entry_tsv:
+                amiibo_name = entry[0]
+                character_name = entry[1]
+                trainer_name = entry[2]
+
+                starting_num = 1
+
+                name_for_bracket = f"{trainer_name} - {character_name}"
+                while name_for_bracket in entries:
+                    starting_num += 1
+                    if str(starting_num - 1) == name_for_bracket[-1]:
+                        name_for_bracket = name_for_bracket.replace(starting_num - 1, starting_num)
+                    else:
+                        name_for_bracket = f"{name_for_bracket} - {starting_num}"
+
+                entries.append(name_for_bracket)
+                bindict[name_for_bracket] = f"{trainer_name}-{character_name}-{amiibo_name}"
+
+                try:
+                    tour.add_participant(name_for_bracket)
+                except:
+                    pass
         try:
             tour.shuffle_participants()
             tour.start()
