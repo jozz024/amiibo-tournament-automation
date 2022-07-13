@@ -16,6 +16,8 @@ import asyncio
 from joycontrol.nfc_tag import NFCTag
 import socket
 import csv
+import re
+import unicodedata
 
 if not os.path.exists("config.json"):
     config = {}
@@ -45,6 +47,22 @@ async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     await load_match(controller_state, True, fp1_tag, fp2_tag)
+
+def slugify(value, allow_unicode=False):
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+    else:
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value.lower())
+    return re.sub(r'[-\s]+', '-', value).rstrip('-_')
 
 def get_latest_image():
     ftp = ftplib.FTP()
@@ -150,7 +168,7 @@ async def main(tour: Tournament):
                         name_for_bracket = f"{name_for_bracket} - {starting_num}"
 
                 entries.append(name_for_bracket)
-                bindict[name_for_bracket] = f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}"
+                bindict[name_for_bracket] = slugify(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
 
                 try:
                     tour.add_participant(name_for_bracket)
