@@ -133,6 +133,7 @@ async def main(tour: Tournament):
         with open("entries.tsv") as fp:
             # open the entry tsv submissionapp provides
             entry_tsv = csv.reader(fp, delimiter = "\t")
+            next(entry_tsv)
             for entry in entry_tsv:
                 amiibo_name = entry[0]
                 character_name = entry[1]
@@ -149,7 +150,7 @@ async def main(tour: Tournament):
                         name_for_bracket = f"{name_for_bracket} - {starting_num}"
 
                 entries.append(name_for_bracket)
-                bindict[name_for_bracket] = f"{trainer_name}-{character_name}-{amiibo_name}"
+                bindict[name_for_bracket] = f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}"
 
                 try:
                     tour.add_participant(name_for_bracket)
