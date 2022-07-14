@@ -47,22 +47,15 @@ async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     await load_match(controller_state, True, fp1_tag, fp2_tag)
-
-def slugify(value, allow_unicode=False):
-    """
-    Taken from https://github.com/django/django/blob/master/django/utils/text.py
-    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
-    dashes to single dashes. Remove characters that aren't alphanumerics,
-    underscores, or hyphens. Convert to lowercase. Also strip leading and
-    trailing whitespace, dashes, and underscores.
-    """
-    value = str(value)
-    if allow_unicode:
-        value = unicodedata.normalize('NFKC', value)
+def replace_bad_character(letter):
+    if letter in " %:/,.\\[]<>*?":
+        return "+"
     else:
-        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-    value = re.sub(r'[^\w\s-]', '', value)
-    return re.sub(r'[-\s]+', '-', value).rstrip('-_')
+        return letter
+def slugify(value):
+    real_value = ""
+    real_value.join([replace_bad_character(c) for c in value])
+    return real_value
 
 def get_latest_image():
     ftp = ftplib.FTP()
