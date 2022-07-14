@@ -26,7 +26,7 @@ if not os.path.exists("config.json"):
     config["webhook_name"] = input("Input the preferred name of your webhook.\n")
     config["challonge_username"] = input("Please input your challonge username.\n")
     config["challonge_api_key"] = input("Please input your challonge api key.\n")
-
+    config["save_after_match"] = False
     with open("config.json", "w+") as cfg:
         json.dump(config, cfg, indent=4)
 
@@ -124,6 +124,7 @@ async def load_match(controller_state, game_start, fp1_tag, fp2_tag):
     await asyncio.sleep(5)
     controller_state.set_nfc(None)
     await execute(controller_state, "tournament-scripts/start_match")
+
 
 async def main(tour: Tournament):
     global bindict
@@ -244,7 +245,19 @@ async def main(tour: Tournament):
                 await asyncio.sleep(5)
                 await button_push(controller_state, "capture", sec=0.15)
                 await execute(controller_state, "tournament-scripts/on_match_end")
-                await execute(controller_state, "tournament-scripts/after_match")
+                if config["save_after_match"] == True:
+                    await execute(controller_state, "tournament-scripts/after_match_save")
+                    controller_state.set_nfc(fp1_tag)
+                    await asyncio.sleep(5)
+                    fp1_tag.save()
+                    controller_state.set_nfc(None)
+                    await asyncio.sleep(2)
+                    controller_state.set_nfc(fp2_tag)
+                    await asyncio.sleep(5)
+                    fp2_tag.save()
+                    controller_state.set_nfc(None)
+                else:
+                    await execute(controller_state, "tournament-scripts/after_match")
                 for webhooks in webhook_list:
                     try:
                         await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
