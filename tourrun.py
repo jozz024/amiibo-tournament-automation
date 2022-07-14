@@ -54,11 +54,9 @@ def replace_bad_character(letter):
     else:
         return letter
 def slugify(value: str):
-    list_ = []
-    for letter in value:
-        list_.append(replace_bad_character(letter))
     real_value = ""
-    real_value.join([c for c in list_])
+    for letter in value:
+        real_value += (replace_bad_character(letter))
     return real_value
 
 def get_latest_image():
