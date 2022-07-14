@@ -47,14 +47,18 @@ async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     await load_match(controller_state, True, fp1_tag, fp2_tag)
+
 def replace_bad_character(letter):
-    if letter in " %:/,.\\[]<>*?":
+    if letter in "%:/,.\\[]<>*?":
         return "+"
     else:
         return letter
-def slugify(value):
+def slugify(value: str):
+    list_ = []
+    for letter in value:
+        list_.append(replace_bad_character(letter))
     real_value = ""
-    real_value.join([replace_bad_character(c) for c in value])
+    real_value.join([c for c in list_])
     return real_value
 
 def get_latest_image():
