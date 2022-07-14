@@ -49,11 +49,11 @@ async def restart_match(controller_state, fp1_tag, fp2_tag):
     await load_match(controller_state, True, fp1_tag, fp2_tag)
 
 def replace_bad_character(letter):
-    if letter in "%:/,.\\[]<>*?":
+    if letter in "%:/'\"\\[]<>*?":
         return "+"
     else:
         return letter
-def slugify(value: str):
+def validate_filename(value: str):
     real_value = ""
     for letter in value:
         real_value += (replace_bad_character(letter))
@@ -163,7 +163,7 @@ async def main(tour: Tournament):
                         name_for_bracket = f"{name_for_bracket} - {starting_num}"
 
                 entries.append(name_for_bracket)
-                bindict[name_for_bracket] = slugify(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
+                bindict[name_for_bracket] = validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
 
                 try:
                     tour.add_participant(name_for_bracket)
