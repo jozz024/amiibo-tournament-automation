@@ -55,6 +55,7 @@ def setup_thread(tour: Tournament):
                 trainer_name = entry[2]
 
                 name_for_bracket = f"{trainer_name} - {character_name}"
+                print(name_for_bracket)
                 full_name = f"{name_for_bracket} - {amiibo_name}"
                 while name_for_bracket in bindict:
                     old_amiibo = bindict[name_for_bracket]["full_name"]
@@ -73,9 +74,9 @@ def setup_thread(tour: Tournament):
             tour.shuffle_participants()
             tour.start()
         except:
-            pass
+            return
     except:
-        pass
+        return
 
 def thread_loop(protocol):
     while True:
