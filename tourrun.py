@@ -78,10 +78,10 @@ def setup_thread(tour: Tournament):
     except:
         return
 
-def thread_loop(protocol):
-    while True:
-        if protocol.transport is None:
-            raise Exception("Controller not connected!")
+# def thread_loop(protocol):
+#     while True:
+#         if protocol.transport is None:
+#             raise Exception("Controller not connected!")
 
 async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
@@ -183,9 +183,9 @@ async def main(tour: Tournament):
     # get a reference to the state beeing emulated.
     controller_state: ControllerState = protocol.get_controller_state()
     # wait for input to be accepted
-    dc_thread = threading.Thread(target=thread_loop, daemon=True, args = [protocol])
+    # dc_thread = threading.Thread(target=thread_loop, daemon=True, args = [protocol])
     entry_thread = threading.Thread(target=setup_thread, daemon=True, args = [tour])
-    dc_thread.start()
+    # dc_thread.start()
     entry_thread.start()
 
     await start_game(controller_state)
