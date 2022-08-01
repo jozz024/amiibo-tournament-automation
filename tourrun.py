@@ -16,8 +16,7 @@ import asyncio
 from joycontrol.nfc_tag import NFCTag
 import socket
 import csv
-import re
-import unicodedata
+import threading
 
 if not os.path.exists("config.json"):
     config = {}
@@ -43,16 +42,58 @@ bindict = {}
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_connected = False
 
+def setup_thread(tour: Tournament):
+    global bindict
+    try:
+        with open("entries.tsv") as fp:
+            # open the entry tsv submissionapp provides
+            entry_tsv = csv.reader(fp, delimiter = "\t")
+            next(entry_tsv)
+            for entry in entry_tsv:
+                amiibo_name = entry[0]
+                character_name = entry[1]
+                trainer_name = entry[2]
+
+                name_for_bracket = f"{trainer_name} - {character_name}"
+                full_name = f"{name_for_bracket} - {amiibo_name}"
+                while name_for_bracket in bindict:
+                    old_amiibo = bindict[name_for_bracket]["full_name"]
+                    old_amiibo_file = bindict[name_for_bracket]["file_name"]
+
+                    bindict.pop(name_for_bracket)
+                    bindict[old_amiibo] = {"full_name": old_amiibo, "file_name": old_amiibo_file}
+
+                bindict[name_for_bracket] = {"full_name": full_name, "file_name": validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")}
+
+                try:
+                    tour.add_participant(name_for_bracket)
+                except:
+                    pass
+        try:
+            tour.shuffle_participants()
+            tour.start()
+        except:
+            pass
+    except:
+        pass
+
+def thread_loop(protocol):
+    while True:
+        if protocol.transport is None:
+            raise Exception("Controller not connected!")
+
 async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
+    start_game(controller_state)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    await load_match(controller_state, True, fp1_tag, fp2_tag)
+    await load_match(controller_state, fp1_tag, fp2_tag)
 
 def replace_bad_character(letter):
     if letter in "%:/'\"\\[]<>*?":
         return "+"
     else:
         return letter
+
 def validate_filename(value: str):
     real_value = ""
     for letter in value:
@@ -98,23 +139,23 @@ def get_latest_image():
     return image
 
 async def execute(controller_state, script_path):
-        script_runner = ScriptRunner(controller_state)
-        script_runner.is_looping = False
-        script_file_name = os.path.expanduser(script_path)
-        if os.path.exists(script_file_name):
-            await script_runner.execute_script_file(script_file_name)
-        else:
-            print("not found")
-
-
-async def load_match(controller_state, game_start, fp1_tag, fp2_tag):
-    if game_start == True:
-        await execute(controller_state, "tournament-scripts/start_game")
-        s.connect((ip, int(port)))
-        await asyncio.sleep(18)
-        await execute(controller_state, "tournament-scripts/smash_menu")
+    script_runner = ScriptRunner(controller_state)
+    script_runner.is_looping = False
+    script_file_name = os.path.expanduser(script_path)
+    if os.path.exists(script_file_name):
+        await script_runner.execute_script_file(script_file_name)
     else:
-        await execute(controller_state, "tournament-scripts/smash_menu_after_match")
+        print("not found")
+
+async def start_game(controller_state):
+    await controller_state.connect()
+    await execute(controller_state, "tournament-scripts/start_game")
+    s.connect((ip, int(port)))
+    await asyncio.sleep(18)
+    await execute(controller_state, "tournament-scripts/smash_menu")
+
+async def load_match(controller_state, fp1_tag, fp2_tag):
+    await execute(controller_state, "tournament-scripts/smash_menu_after_match")
     await execute(controller_state, "tournament-scripts/load_fp1")
     controller_state.set_nfc(fp1_tag)
     await asyncio.sleep(5)
@@ -141,45 +182,15 @@ async def main(tour: Tournament):
     # get a reference to the state beeing emulated.
     controller_state: ControllerState = protocol.get_controller_state()
     # wait for input to be accepted
-    await controller_state.connect()
-    entries = []
-    try:
-        with open("entries.tsv") as fp:
-            # open the entry tsv submissionapp provides
-            entry_tsv = csv.reader(fp, delimiter = "\t")
-            next(entry_tsv)
-            for entry in entry_tsv:
-                amiibo_name = entry[0]
-                character_name = entry[1]
-                trainer_name = entry[2]
+    dc_thread = threading.Thread(target=thread_loop, daemon=True, args = [protocol])
+    entry_thread = threading.Thread(target=setup_thread, daemon=True, args = [tour])
+    dc_thread.start()
+    entry_thread.start()
 
-                starting_num = 1
-
-                name_for_bracket = f"{trainer_name} - {character_name}"
-                while name_for_bracket in entries:
-                    starting_num += 1
-                    if str(starting_num - 1) == name_for_bracket[-1]:
-                        name_for_bracket = name_for_bracket.replace(starting_num - 1, starting_num)
-                    else:
-                        name_for_bracket = f"{name_for_bracket} - {starting_num}"
-
-                entries.append(name_for_bracket)
-                bindict[name_for_bracket] = validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
-
-                try:
-                    tour.add_participant(name_for_bracket)
-                except:
-                    pass
-        try:
-            tour.shuffle_participants()
-            tour.start()
-        except:
-            pass
-    except:
-        pass
+    await start_game(controller_state)
     new_match = True
-    game_start = True
     match_num = 0
+    entry_thread.join()
     while new_match == True:
         tour.refresh_matches()
         try:
@@ -194,8 +205,8 @@ async def main(tour: Tournament):
                     p1: tour.matches[match_num]["player1_id"],
                     p2: tour.matches[match_num]["player2_id"]
                 }
-                p1_filepath = bindict[p1]
-                p2_filepath = bindict[p2]
+                p1_filepath = bindict[p1]["file_name"]
+                p2_filepath = bindict[p2]["file_name"]
                 tour.mark_in_progress(tour.matches[match_num]["id"])
                 with open(os.path.join("tourbins", p1_filepath + ".bin"), "rb") as fp1_file:
                     fp1_hex = fp1_file.read()
@@ -204,7 +215,7 @@ async def main(tour: Tournament):
                     fp2_hex = fp2_file.read()
                 fp1_tag = NFCTag(data=fp1_hex, source=p1_filepath, mutable=True)
                 fp2_tag = NFCTag(data=fp2_hex, source=p2_filepath, mutable=True)
-                await load_match(controller_state, game_start, fp1_tag, fp2_tag)
+                await load_match(controller_state, fp1_tag, fp2_tag)
                 game_start = False
                 while True:
                     data = s.recv(1024)
@@ -276,6 +287,7 @@ async def main(tour: Tournament):
 if __name__ == "__main__":
     toururl = input("please input the url of the tournament:\n")
     tour = Tournament(toururl, config["challonge_username"], config["challonge_api_key"])
+
     log.configure(console_level=logging.ERROR)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(tour))
