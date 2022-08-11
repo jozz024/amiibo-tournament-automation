@@ -65,7 +65,7 @@ def real_main():
     tour = Tournament(toururl, config["challonge_username"], config["challonge_api_key"])
 
     log.configure(console_level=logging.ERROR)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(main(tour))
 
 async def joycontrol(mailbox, controller_state):
