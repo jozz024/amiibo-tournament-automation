@@ -53,8 +53,7 @@ webhook_list = []
 match_num = 0
 proceed = False
 
-def joycontrol_main(mailbox, controller_state):
-    loop = asyncio.new_event_loop()
+def joycontrol_main(mailbox, controller_state, loop: asyncio.AbstractEventLoop):
     loop.run_until_complete(
         joycontrol(mailbox, controller_state)
     )
@@ -66,7 +65,7 @@ def real_main():
 
     log.configure(console_level=logging.ERROR)
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(main(tour))
+    loop.run_until_complete(main(tour, loop))
 
 async def joycontrol(mailbox, controller_state):
     script_runner = ScriptRunner(controller_state)
@@ -206,7 +205,7 @@ async def load_match(controller_state, fp1_tag, fp2_tag):
     await execute(controller_state, "tournament-scripts/start_match")
 
 
-async def main(tour: Tournament):
+async def main(tour: Tournament, loop):
     global bindict
     global match_num
 
@@ -222,7 +221,7 @@ async def main(tour: Tournament):
     entry_thread = threading.Thread(target=setup_thread, daemon=True, args = [tour])
     entry_thread.start()
 
-    t1 = threading.Thread(target = joycontrol_main, daemon=True, args = (mailbox, controller_state))
+    t1 = threading.Thread(target = joycontrol_main, daemon=True, args = (mailbox, controller_state, loop))
     t1.start()
 
     await start_game(controller_state)
