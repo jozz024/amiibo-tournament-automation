@@ -1,22 +1,31 @@
-from tournament import Tournament
-from joycontrol.protocol import controller_protocol_factory
-from joycontrol.server import create_hid_server
-from joycontrol.controller import Controller
-import logging
-from joycontrol.controller_state import ControllerState
-from joycontrol.controller_state import button_push
-from joycontrol.ScriptRunner import ScriptRunner
-from joycontrol import logging_default as log, utils
-import os
-import webhook
+import asyncio
+import csv
+import ftplib
 import io
 import json
-import ftplib
-import asyncio
-from joycontrol.nfc_tag import NFCTag
+import logging
+import os
 import socket
-import csv
 import threading
+from queue import Queue
+
+from flask import Flask, request
+
+import webhook
+from joycontrol import logging_default as log
+from joycontrol import utils
+from joycontrol.controller import Controller
+from joycontrol.controller_state import ControllerState, button_push
+from joycontrol.memory import FlashMemory
+from joycontrol.nfc_tag import NFCTag
+from joycontrol.protocol import controller_protocol_factory
+from joycontrol.ScriptRunner import ScriptRunner
+from joycontrol.server import create_hid_server
+from tournament import Tournament
+
+app = Flask(__name__)
+
+mailbox = Queue()
 
 if not os.path.exists("config.json"):
     config = {}
@@ -25,7 +34,6 @@ if not os.path.exists("config.json"):
     config["webhook_name"] = input("Input the preferred name of your webhook.\n")
     config["challonge_username"] = input("Please input your challonge username.\n")
     config["challonge_api_key"] = input("Please input your challonge api key.\n")
-    config["save_after_match"] = False
     with open("config.json", "w+") as cfg:
         json.dump(config, cfg, indent=4)
 
@@ -41,9 +49,28 @@ port = "6969"
 bindict = {}
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_connected = False
+webhook_list = []
+match_num = 0
+proceed = False
+
+async def joycontrol(mailbox, controller_state):
+    script_runner = ScriptRunner(controller_state)
+
+    # Waits for instructions from the Flask thread and executes them.
+    while True:
+        cmd, data = mailbox.get(block = True)
+
+        if cmd == "nfc":
+            controller_state.set_nfc(data)
+        elif cmd == "script":
+            await script_runner.execute_script_string(data)
 
 def setup_thread(tour: Tournament):
-    global bindict
+    global webhook_list
+    webhook_list = []
+    for urls in config["webhook_url"]:
+        webhook_list.append(webhook.MatchResultWebhoook(urls, config["webhook_name"]))
+
     try:
         with open("entries.tsv") as fp:
             # open the entry tsv submissionapp provides
@@ -78,10 +105,6 @@ def setup_thread(tour: Tournament):
     except:
         return
 
-# def thread_loop(protocol):
-#     while True:
-#         if protocol.transport is None:
-#             raise Exception("Controller not connected!")
 
 async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
@@ -170,9 +193,7 @@ async def load_match(controller_state, fp1_tag, fp2_tag):
 
 async def main(tour: Tournament):
     global bindict
-    webhook_list = []
-    for urls in config["webhook_url"]:
-        webhook_list.append(webhook.MatchResultWebhoook(urls, config["webhook_name"]))
+    global match_num
 
     # the type of controller to create
     controller = Controller.PRO_CONTROLLER # or JOYCON_L or JOYCON_R
@@ -183,9 +204,7 @@ async def main(tour: Tournament):
     # get a reference to the state beeing emulated.
     controller_state: ControllerState = protocol.get_controller_state()
     # wait for input to be accepted
-    # dc_thread = threading.Thread(target=thread_loop, daemon=True, args = [protocol])
     entry_thread = threading.Thread(target=setup_thread, daemon=True, args = [tour])
-    # dc_thread.start()
     entry_thread.start()
 
     await start_game(controller_state)
@@ -202,10 +221,6 @@ async def main(tour: Tournament):
             else:
                 p1 = tour.get_user_from_id(tour.matches[match_num]["player1_id"])
                 p2 = tour.get_user_from_id(tour.matches[match_num]["player2_id"])
-                name_to_id = {
-                    p1: tour.matches[match_num]["player1_id"],
-                    p2: tour.matches[match_num]["player2_id"]
-                }
                 p1_filepath = bindict[p1]["file_name"]
                 p2_filepath = bindict[p2]["file_name"]
                 tour.mark_in_progress(tour.matches[match_num]["id"])
@@ -217,65 +232,7 @@ async def main(tour: Tournament):
                 fp1_tag = NFCTag(data=fp1_hex, source=p1_filepath, mutable=True)
                 fp2_tag = NFCTag(data=fp2_hex, source=p2_filepath, mutable=True)
                 await load_match(controller_state, fp1_tag, fp2_tag)
-                game_start = False
-                while True:
-                    data = s.recv(1024)
-                    try:
-                        if data.decode().startswith("[match_end] Player"):
-                            w_l_str = data.decode().split(".")[1].lstrip()
-                            break
-                        if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
-                            await restart_match(controller_state, fp1_tag, fp2_tag)
-                            continue
-                    except:
-                        await restart_match(controller_state, fp1_tag, fp2_tag)
-                        continue
 
-                score = w_l_str
-                print(score)
-                p1_score, p2_score = score.replace("\n", "").split("-")
-                if int(p1_score) > int(p2_score):
-                    tour.set_score(tour.matches[match_num]["id"], name_to_id[p1], score)
-                    winner = p1.split("-")
-                    winner_name = winner[0].strip(" ")
-                    winner_character = winner[1].strip(" ")
-                    winner_score = p1_score.strip(" ")
-                    loser_score = p2_score.strip(" ")
-                    loser = p2.split("-")
-                    loser_name = loser[0].strip(" ")
-                    loser_character = loser[1].strip(" ")
-                else:
-                    tour.set_score(tour.matches[match_num]["id"], name_to_id[p2], score)
-                    winner = p2.split("-")
-                    winner_name = winner[0].strip(" ")
-                    winner_character = winner[1].strip(" ")
-                    winner_score = p2_score.strip(" ")
-                    loser_score = p1_score.strip(" ")
-                    loser = p1.split("-")
-                    loser_name = loser[0].strip(" ")
-                    loser_character = loser[1].strip(" ")
-                await asyncio.sleep(5)
-                await button_push(controller_state, "capture", sec=0.15)
-                await execute(controller_state, "tournament-scripts/on_match_end")
-                if config["save_after_match"] == True:
-                    await execute(controller_state, "tournament-scripts/after_match_save")
-                    controller_state.set_nfc(fp1_tag)
-                    await asyncio.sleep(5)
-                    fp1_tag.save()
-                    controller_state.set_nfc(None)
-                    await asyncio.sleep(2)
-                    controller_state.set_nfc(fp2_tag)
-                    await asyncio.sleep(5)
-                    fp2_tag.save()
-                    controller_state.set_nfc(None)
-                else:
-                    await execute(controller_state, "tournament-scripts/after_match")
-                for webhooks in webhook_list:
-                    try:
-                        await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
-                    except ConnectionResetError:
-                        await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
-                await asyncio.sleep(12)
                 new_match = True
         except IndexError:
             tour.refresh_matches()
@@ -293,3 +250,50 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(tour))
 
+@app.route("/match_end", options=["POST"])
+def match_end():
+    global proceed
+    data = request.json
+    score = f"{data['fp1_info']['score']}-{data['fp1_info']['score']}"
+    print(score)
+    p1_score, p2_score = score.replace("\n", "").split("-")
+    p1 = tour.get_user_from_id(tour.matches[match_num]["player1_id"])
+    p2 = tour.get_user_from_id(tour.matches[match_num]["player2_id"])
+    name_to_id = {
+        p1: tour.matches[match_num]["player1_id"],
+        p2: tour.matches[match_num]["player2_id"]
+    }
+    p1_filepath = bindict[p1]["file_name"]
+    p2_filepath = bindict[p2]["file_name"]
+    if int(p1_score) > int(p2_score):
+        tour.set_score(tour.matches[match_num]["id"], name_to_id[p1], score)
+        winner = p1.split("-")
+        winner_name = winner[0].strip(" ")
+        winner_character = winner[1].strip(" ")
+        winner_score = p1_score.strip(" ")
+        loser_score = p2_score.strip(" ")
+        loser = p2.split("-")
+        loser_name = loser[0].strip(" ")
+        loser_character = loser[1].strip(" ")
+    else:
+        tour.set_score(tour.matches[match_num]["id"], name_to_id[p2], score)
+        winner = p2.split("-")
+        winner_name = winner[0].strip(" ")
+        winner_character = winner[1].strip(" ")
+        winner_score = p2_score.strip(" ")
+        loser_score = p1_score.strip(" ")
+        loser = p1.split("-")
+        loser_name = loser[0].strip(" ")
+        loser_character = loser[1].strip(" ")
+    mailbox.put(("script", ": 5000\nCapture: 150"))
+    with open("tournament-scripts/on_match_end") as script:
+        mailbox.put(("script", script.read()))
+
+    with open("tournament-scripts/after_match") as script:
+        mailbox.put(("script", script.read()))
+    mailbox.put(("script", ": 15000"))
+    for webhooks in webhook_list:
+        try:
+            webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
+        except ConnectionResetError:
+            webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
