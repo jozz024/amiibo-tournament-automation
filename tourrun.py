@@ -260,7 +260,7 @@ async def main(tour: Tournament):
     # wait for it to be sent at least once
     await controller_state.send()
 
-@app.route("/match_end", options=["POST"])
+@app.route("/match_end", methods=["POST"])
 def match_end():
     global proceed
     data = request.json
