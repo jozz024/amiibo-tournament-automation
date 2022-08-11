@@ -53,6 +53,21 @@ webhook_list = []
 match_num = 0
 proceed = False
 
+def joycontrol_main(mailbox, controller_state):
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(
+        joycontrol(mailbox, controller_state)
+    )
+
+def real_main():
+    global tour
+    toururl = input("please input the url of the tournament:\n")
+    tour = Tournament(toururl, config["challonge_username"], config["challonge_api_key"])
+
+    log.configure(console_level=logging.ERROR)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main(tour))
+
 async def joycontrol(mailbox, controller_state):
     script_runner = ScriptRunner(controller_state)
 
@@ -207,6 +222,9 @@ async def main(tour: Tournament):
     entry_thread = threading.Thread(target=setup_thread, daemon=True, args = [tour])
     entry_thread.start()
 
+    t1 = threading.Thread(target = joycontrol_main, daemon=True, args = (mailbox, controller_state))
+    t1.start()
+
     await start_game(controller_state)
     new_match = True
     match_num = 0
@@ -241,14 +259,6 @@ async def main(tour: Tournament):
             new_match = False
     # wait for it to be sent at least once
     await controller_state.send()
-
-if __name__ == "__main__":
-    toururl = input("please input the url of the tournament:\n")
-    tour = Tournament(toururl, config["challonge_username"], config["challonge_api_key"])
-
-    log.configure(console_level=logging.ERROR)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(tour))
 
 @app.route("/match_end", options=["POST"])
 def match_end():
@@ -297,3 +307,10 @@ def match_end():
             webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
         except ConnectionResetError:
             webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
+
+if __name__ == "__main__":
+    main_thread = threading.Thread(target = real_main, daemon=True)
+
+    main_thread.start()
+
+    app.run()
