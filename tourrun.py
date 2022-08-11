@@ -250,7 +250,9 @@ async def main(tour: Tournament):
                 fp1_tag = NFCTag(data=fp1_hex, source=p1_filepath, mutable=True)
                 fp2_tag = NFCTag(data=fp2_hex, source=p2_filepath, mutable=True)
                 await load_match(controller_state, fp1_tag, fp2_tag)
-
+                proceed = False
+                while proceed != True:
+                    pass
                 new_match = True
         except IndexError:
             tour.refresh_matches()
@@ -273,8 +275,7 @@ def match_end():
         p1: tour.matches[match_num]["player1_id"],
         p2: tour.matches[match_num]["player2_id"]
     }
-    p1_filepath = bindict[p1]["file_name"]
-    p2_filepath = bindict[p2]["file_name"]
+
     if int(p1_score) > int(p2_score):
         tour.set_score(tour.matches[match_num]["id"], name_to_id[p1], score)
         winner = p1.split("-")
@@ -307,6 +308,8 @@ def match_end():
             webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
         except ConnectionResetError:
             webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
+    proceed = False
+
 
 if __name__ == "__main__":
     main_thread = threading.Thread(target = real_main, daemon=True)
