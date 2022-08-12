@@ -54,7 +54,7 @@ match_num = 0
 proceed = False
 
 def joycontrol_main(mailbox, controller_state, loop: asyncio.AbstractEventLoop):
-    loop.run_until_complete(
+    loop.create_task(
         joycontrol(mailbox, controller_state)
     )
 
