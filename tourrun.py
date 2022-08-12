@@ -65,7 +65,9 @@ def real_main():
 
     log.configure(console_level=logging.ERROR)
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(main(tour, loop))
+    loop.create_task(main(tour, loop))
+
+    loop.run_forever()
 
 async def joycontrol(mailbox, controller_state):
     script_runner = ScriptRunner(controller_state)
