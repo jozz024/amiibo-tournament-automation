@@ -212,7 +212,10 @@ async def main(tour: Tournament):
                         if data.decode().startswith("[match_end] Player"):
                             w_l_str = data.decode().split(".")[1].lstrip()
                             break
-                        if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
+                        elif data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
+                            await restart_match(controller_state, fp1_tag, fp2_tag)
+                            continue
+                        elif data.decode().startswith("[match_end] Match didn't successfully start, exiting."):
                             await restart_match(controller_state, fp1_tag, fp2_tag)
                             continue
                     except:
