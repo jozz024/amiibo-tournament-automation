@@ -24,6 +24,7 @@ if not os.path.exists("config.json"):
     config["ip"] = input("Input your switch's IP address.\n")
     config["webhook_url"] = input("Input the url of your webhook.\n")
     config["webhook_name"] = input("Input the preferred name of your webhook.\n")
+    config["webhook_avatar_url"] = input("Input the link to the profile picture you would like the bot to use:\n")
     config["challonge_username"] = input("Please input your challonge username.\n")
     config["challonge_api_key"] = input("Please input your challonge api key.\n")
     config["save_after_match"] = False
@@ -130,7 +131,7 @@ async def main(tour: Tournament):
     global bindict
     webhook_list = []
     for urls in config["webhook_url"]:
-        webhook_list.append(webhook.MatchResultWebhoook(urls, config["webhook_name"]))
+        webhook_list.append(webhook.MatchResultWebhoook(urls, config["webhook_name"], config["webhook_avatar_url"]))
 
     # the type of controller to create
     controller = Controller.PRO_CONTROLLER # or JOYCON_L or JOYCON_R
