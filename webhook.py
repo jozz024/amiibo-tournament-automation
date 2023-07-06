@@ -3,7 +3,7 @@ from nextcord import File
 import aiohttp
 
 class MatchResultWebhoook:
-    def __init__(self, url, name, avatar_url: str | None = None) -> None:
+    def __init__(self, url, name, avatar_url= None) -> None:
         self.url = url
         self.name = name
         self.avatar_url = avatar_url
