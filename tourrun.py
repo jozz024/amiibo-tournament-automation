@@ -210,7 +210,6 @@ async def main(tour: Tournament):
                 while True:
                     data = s.recv(1024)
                     try:
-                        await asyncio.sleep(10)
                         if data.decode().startswith("[match_end] Player"):
                             w_l_str = data.decode().split(".")[1].lstrip()
                             break
