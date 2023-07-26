@@ -210,12 +210,17 @@ async def main(tour: Tournament):
                 while True:
                     data = s.recv(1024)
                     try:
+                        await asyncio.sleep(10)
                         if data.decode().startswith("[match_end] Player"):
                             w_l_str = data.decode().split(".")[1].lstrip()
                             break
                         if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
                             await restart_match(controller_state, fp1_tag, fp2_tag)
                             continue
+                        if data.decode().startswith("[match_end] current_menu_id:"):
+                            if data.decode().lstrip() != "[match_end] current_menu_id: 0x4206969":
+                                await restart_match(controller_state, fp1_tag, fp2_tag)
+                                continue
                     except:
                         await restart_match(controller_state, fp1_tag, fp2_tag)
                         continue
