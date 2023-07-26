@@ -218,7 +218,8 @@ async def main(tour: Tournament):
                             await restart_match(controller_state, fp1_tag, fp2_tag)
                             continue
                         if data.decode().startswith("[match_end] current_menu_id:"):
-                            if data.decode().lstrip() != "[match_end] current_menu_id: 0x4206969":
+                            print(data.decode().lstrip().startswith("[match_end] current_menu_id: 0x4206969"))
+                            if data.decode().lstrip() != "[match_end] current_menu_id: 0x4206969\n":
                                 await restart_match(controller_state, fp1_tag, fp2_tag)
                                 continue
                     except:
