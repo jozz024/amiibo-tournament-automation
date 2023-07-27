@@ -186,6 +186,8 @@ async def main(tour: Tournament, whole_thing: bool):
             match_num = input("Please input a match number for the match you want to be done, and x to exit.\n")
             if match_num != "x":
                 matches_to_do += [int(match_num)]
+            else:
+                break
     match_num = 0
     while new_match == True:
         tour.refresh_matches()
