@@ -197,7 +197,7 @@ async def main(tour: Tournament, whole_thing: bool):
             elif tour.matches[match_num]["scores_csv"] != "":
                 match_num += 1
             elif whole_thing == False and match_num not in matches_to_do:
-                match_num + 1
+                match_num += 1
             else:
                 p1 = tour.get_user_from_id(tour.matches[match_num]["player1_id"])
                 p2 = tour.get_user_from_id(tour.matches[match_num]["player2_id"])
