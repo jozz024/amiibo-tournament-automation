@@ -127,7 +127,7 @@ async def load_match(controller_state, game_start, fp1_tag, fp2_tag):
     await execute(controller_state, "tournament-scripts/start_match")
 
 
-async def main(tour: Tournament):
+async def main(tour: Tournament, whole_thing: bool):
     global bindict
     webhook_list = []
     for urls in config["webhook_url"]:
@@ -180,6 +180,12 @@ async def main(tour: Tournament):
         pass
     new_match = True
     game_start = True
+    matches_to_do = []
+    if whole_thing == False:
+        while True:
+            match_num = input("Please input a match number for the match you want to be done, and x to exit.\n")
+            if match_num != "x":
+                matches_to_do += [int(match_num)]
     match_num = 0
     while new_match == True:
         tour.refresh_matches()
@@ -188,6 +194,8 @@ async def main(tour: Tournament):
                 match_num += 1
             elif tour.matches[match_num]["scores_csv"] != "":
                 match_num += 1
+            elif whole_thing == False and match_num not in matches_to_do:
+                match_num + 1
             else:
                 p1 = tour.get_user_from_id(tour.matches[match_num]["player1_id"])
                 p2 = tour.get_user_from_id(tour.matches[match_num]["player2_id"])
@@ -277,7 +285,13 @@ async def main(tour: Tournament):
 if __name__ == "__main__":
     toururl = input("please input the url of the tournament:\n")
     tour = Tournament(toururl, config["challonge_username"], config["challonge_api_key"])
-    log.configure(console_level=logging.ERROR)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(tour))
+    run_or_matches = input("Run the entire tournament, or do specific matches?")
+    if run_or_matches == "run":
+        log.configure(console_level=logging.ERROR)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main(tour, True))
+    else:
+        log.configure(console_level=logging.ERROR)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main(tour, False))
 
