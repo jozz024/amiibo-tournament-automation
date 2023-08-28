@@ -87,7 +87,7 @@ def setup_thread(tour: Tournament):
     webhook_list = []
     for urls in config["webhook_url"]:
         webhook_list.append(webhook.MatchResultWebhoook(urls, config["webhook_name"]))
-
+    entries = []
     try:
         with open("entries.tsv") as fp:
             # open the entry tsv submissionapp provides
@@ -98,17 +98,18 @@ def setup_thread(tour: Tournament):
                 character_name = entry[1]
                 trainer_name = entry[2]
 
+                starting_num = 1
+
                 name_for_bracket = f"{trainer_name} - {character_name}"
-                print(name_for_bracket)
-                full_name = f"{name_for_bracket} - {amiibo_name}"
-                while name_for_bracket in bindict:
-                    old_amiibo = bindict[name_for_bracket]["full_name"]
-                    old_amiibo_file = bindict[name_for_bracket]["file_name"]
+                while name_for_bracket in entries:
+                    starting_num += 1
+                    if str(starting_num - 1) == name_for_bracket[-1]:
+                        name_for_bracket = name_for_bracket.replace(starting_num - 1, starting_num)
+                    else:
+                        name_for_bracket = f"{name_for_bracket} - {starting_num}"
 
-                    bindict.pop(name_for_bracket)
-                    bindict[old_amiibo] = {"full_name": old_amiibo, "file_name": old_amiibo_file}
-
-                bindict[name_for_bracket] = {"full_name": full_name, "file_name": validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")}
+                entries.append(name_for_bracket)
+                bindict[name_for_bracket] = validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
 
                 try:
                     tour.add_participant(name_for_bracket)
@@ -118,7 +119,7 @@ def setup_thread(tour: Tournament):
             tour.shuffle_participants()
             tour.start()
         except:
-            return
+            pass
     except:
         return
 
@@ -310,7 +311,7 @@ def match_end():
             webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
         except ConnectionResetError:
             webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
-    proceed = False
+    proceed = True
 
 
 if __name__ == "__main__":
