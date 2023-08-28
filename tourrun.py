@@ -57,7 +57,6 @@ def joycontrol_main(mailbox, controller_state, loop: asyncio.AbstractEventLoop):
     loop.create_task(
         joycontrol(mailbox, controller_state)
     )
-    loop.run_forever()
 
 def real_main():
     global tour
