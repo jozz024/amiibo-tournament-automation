@@ -60,6 +60,10 @@ def validate_filename(value: str):
         real_value += (replace_bad_character(letter))
     return real_value
 
+def get_player_info(player_str):
+    player_info = player_str.split("-")
+    return player_info[0].strip(), player_info[1].strip()
+
 def get_latest_image():
     ftp = ftplib.FTP()
     ftp.connect(config["ip"], 5000)
@@ -144,38 +148,37 @@ async def main(tour: Tournament, whole_thing: bool):
     # wait for input to be accepted
     await controller_state.connect()
     entries = []
-    try:
-        with open("entries.tsv") as fp:
-            # open the entry tsv submissionapp provides
-            entry_tsv = csv.reader(fp, delimiter = "\t")
-            next(entry_tsv)
-            for entry in entry_tsv:
-                amiibo_name = entry[0]
-                character_name = entry[1]
-                trainer_name = entry[2]
+    with open("entries.tsv") as fp:
+        # open the entry tsv submissionapp provides
+        entry_tsv = csv.reader(fp, delimiter = "\t")
+        next(entry_tsv)
+        for entry in entry_tsv:
+            amiibo_name = entry[0]
+            character_name = entry[1]
+            trainer_name = entry[2]
 
-                starting_num = 1
+            starting_num = 1
 
-                name_for_bracket = f"{trainer_name} - {character_name}"
-                while name_for_bracket in entries:
-                    starting_num += 1
-                    if str(starting_num - 1) == name_for_bracket[-1]:
-                        name_for_bracket = name_for_bracket.replace(starting_num - 1, starting_num)
-                    else:
-                        name_for_bracket = f"{name_for_bracket} - {starting_num}"
+            name_for_bracket = f"{trainer_name} - {character_name} - {amiibo_name}"
+            while name_for_bracket in entries:
+                starting_num += 1
+                if str(starting_num - 1) == name_for_bracket[-1]:
+                    name_for_bracket = name_for_bracket.replace(starting_num - 1, starting_num)
+                else:
+                    name_for_bracket = f"{name_for_bracket} - {starting_num}"
 
-                entries.append(name_for_bracket)
-                bindict[name_for_bracket] = validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
+            entries.append(name_for_bracket)
+            bindict[name_for_bracket] = validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
 
-                try:
-                    tour.add_participant(name_for_bracket)
-                except:
-                    pass
+    print("Finished parsing Submissionapp TSV")
+    for entry in entries:
         try:
-            tour.shuffle_participants()
-            tour.start()
+            tour.add_participant(name_for_bracket)
         except:
-            pass
+            break
+    try:
+        tour.shuffle_participants()
+        tour.start()
     except:
         pass
     new_match = True
@@ -220,8 +223,8 @@ async def main(tour: Tournament, whole_thing: bool):
                 while True:
                     data = s.recv(1024)
                     try:
-                        if data.decode().startswith("[match_end] Player"):
-                            w_l_str = data.decode().split(".")[1].lstrip()
+                        if data.decode().startswith("[match_end] match_data_json: "):
+                            data_json = json.loads(data.decode().strip("[match_end] match_data_json: ").lstrip())
                             break
                         if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
                             await restart_match(controller_state, fp1_tag, fp2_tag)
@@ -230,29 +233,21 @@ async def main(tour: Tournament, whole_thing: bool):
                         await restart_match(controller_state, fp1_tag, fp2_tag)
                         continue
 
-                score = w_l_str
+                score = data_json["fp1_info"]["score"] + "-" + data_json["fp2_info"]["score"]
                 print(score)
-                p1_score, p2_score = score.replace("\n", "").split("-")
-                if int(p1_score) > int(p2_score):
-                    tour.set_score(tour.matches[match_num]["id"], name_to_id[p1], score)
-                    winner = p1.split("-")
-                    winner_name = winner[0].strip(" ")
-                    winner_character = winner[1].strip(" ")
-                    winner_score = p1_score.strip(" ")
-                    loser_score = p2_score.strip(" ")
-                    loser = p2.split("-")
-                    loser_name = loser[0].strip(" ")
-                    loser_character = loser[1].strip(" ")
+                p1_score = int(data_json["fp1_info"]["score"])
+                p2_score = int(data_json["fp2_info"]["score"])
+
+                if p1_score > p2_score:
+                    winner_str, loser_str = p1, p2
+                    winner_score, loser_score = p1_score, p2_score
                 else:
-                    tour.set_score(tour.matches[match_num]["id"], name_to_id[p2], score)
-                    winner = p2.split("-")
-                    winner_name = winner[0].strip(" ")
-                    winner_character = winner[1].strip(" ")
-                    winner_score = p2_score.strip(" ")
-                    loser_score = p1_score.strip(" ")
-                    loser = p1.split("-")
-                    loser_name = loser[0].strip(" ")
-                    loser_character = loser[1].strip(" ")
+                    winner_str, loser_str = p2, p1
+                    winner_score, loser_score = p2_score, p1_score
+                winner_name, winner_character = get_player_info(winner_str)
+                loser_name, loser_character = get_player_info(loser_str)
+
+                tour.set_score(tour.matches[match_num]["id"], name_to_id[winner_str], score)
                 await asyncio.sleep(5)
                 await button_push(controller_state, "capture", sec=0.15)
                 await execute(controller_state, "tournament-scripts/on_match_end")
