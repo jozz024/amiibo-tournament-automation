@@ -159,7 +159,7 @@ async def main(tour: Tournament, whole_thing: bool):
 
             starting_num = 1
 
-            name_for_bracket = f"{trainer_name} - {character_name} - {amiibo_name}"
+            name_for_bracket = f"{trainer_name} - {character_name}"
             while name_for_bracket in entries:
                 starting_num += 1
                 if str(starting_num - 1) == name_for_bracket[-1]:
