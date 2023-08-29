@@ -168,6 +168,7 @@ async def main(tour: Tournament, whole_thing: bool):
                     name_for_bracket = f"{name_for_bracket} - {starting_num}"
 
             entries.append(name_for_bracket)
+            print(name_for_bracket)
             bindict[name_for_bracket] = validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
 
     print("Finished parsing Submissionapp TSV")
