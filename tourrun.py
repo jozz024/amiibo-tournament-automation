@@ -227,7 +227,7 @@ async def main(tour: Tournament, whole_thing: bool):
                     print(data.decode())
                     if data.decode().startswith("[match_end] match_data_json: "):
                         data_json = json.loads(data.decode().strip("[match_end] match_data_json: ").lstrip())
-                        print(data_json["fp1_info"])
+                        print(data_json)
                         break
                     if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
                         await restart_match(controller_state, fp1_tag, fp2_tag)
