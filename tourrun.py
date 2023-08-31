@@ -226,8 +226,8 @@ async def main(tour: Tournament, whole_thing: bool):
                     # try:
                     print(data.decode())
                     if data.decode().startswith("[match_end] match_data_json: "):
-                        print(data.decode().strip("[match_end] match_data_json: ").lstrip().strip('"'))
-                        data_json = json.loads(data.decode().strip("[match_end] match_data_json: ").lstrip().strip('"').replace("\\", ""))
+                        print(data.decode().strip("[match_end] match_data_json: ").lstrip().strip('"').replace("\\", "").rstrip('"'))
+                        data_json = json.loads(data.decode().strip("[match_end] match_data_json: ").lstrip().strip('"').replace("\\", "").rstrip('"'))
                         print(data_json)
                         break
                     if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
