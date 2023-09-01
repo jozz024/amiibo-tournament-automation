@@ -237,10 +237,10 @@ async def main(tour: Tournament, whole_thing: bool):
                     #     await restart_match(controller_state, fp1_tag, fp2_tag)
                     #     continue
 
-                score = data_json["fp1_info"]["score"] + "-" + data_json["fp2_info"]["score"]
+                score = str(data_json["fp1_info"]["score"]) + "-" + str(data_json["fp2_info"]["score"])
                 print(score)
-                p1_score = int(data_json["fp1_info"]["score"])
-                p2_score = int(data_json["fp2_info"]["score"])
+                p1_score = data_json["fp1_info"]["score"]
+                p2_score = data_json["fp2_info"]["score"]
 
                 if p1_score > p2_score:
                     winner_str, loser_str = p1, p2
