@@ -6,7 +6,7 @@ import logging
 from joycontrol.controller_state import ControllerState
 from joycontrol.controller_state import button_push
 from joycontrol.ScriptRunner import ScriptRunner
-from joycontrol import logging_default as log, utils
+from joycontrol import logging_default as log
 import os
 import webhook
 import io
@@ -16,8 +16,7 @@ import asyncio
 from joycontrol.nfc_tag import NFCTag
 import socket
 import csv
-import re
-import unicodedata
+import match_data
 
 if not os.path.exists("config.json"):
     config = {}
@@ -231,6 +230,7 @@ async def main(tour: Tournament, whole_thing: bool):
                         print(data_json)
                         break
                     if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
+                        asyncio.sleep(4)
                         await restart_match(controller_state, fp1_tag, fp2_tag)
                         continue
                     # except:
@@ -241,7 +241,9 @@ async def main(tour: Tournament, whole_thing: bool):
                 print(score)
                 p1_score = data_json["fp1_info"]["score"]
                 p2_score = data_json["fp2_info"]["score"]
-
+                p1_name = bindict[p1].replace(validate_filename(p1.replace(" - ", "-")), "")[1:]
+                p2_name = bindict[p2].replace(validate_filename(p2.replace(" - ", "-")), "")[1:]
+                match_data.export_result_to_csv(data_json, tour.get_tournament_name(), p1_name, p2_name)
                 if p1_score > p2_score:
                     winner_str, loser_str = p1, p2
                     winner_score, loser_score = p1_score, p2_score
@@ -270,10 +272,10 @@ async def main(tour: Tournament, whole_thing: bool):
                     await execute(controller_state, "tournament-scripts/after_match")
                 for webhooks in webhook_list:
                     try:
-                        await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
+                        await webhooks.send_result(f"Running {tour.get_tournament_name()}.\n{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
                     except ConnectionResetError:
-                        await webhooks.send_result(f"{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
-                await asyncio.sleep(12)
+                        await webhooks.send_result(f"Running {tour.get_tournament_name()}.\n{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}", get_latest_image())
+                await asyncio.sleep(5)
                 new_match = True
         except IndexError:
             tour.refresh_matches()

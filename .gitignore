@@ -141,3 +141,4 @@ dmypy.json
 tournament-scripts/
 ssbu.py
 test.py
+*.csv
