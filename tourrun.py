@@ -241,9 +241,7 @@ async def main(tour: Tournament, whole_thing: bool):
                 print(score)
                 p1_score = data_json["fp1_info"]["score"]
                 p2_score = data_json["fp2_info"]["score"]
-                p1_name = bindict[p1].replace(validate_filename(p1.replace(" - ", "-")), "")[1:]
-                p2_name = bindict[p2].replace(validate_filename(p2.replace(" - ", "-")), "")[1:]
-                match_data.export_result_to_csv(data_json, tour.get_tournament_name(), p1_name, p2_name)
+                match_data.export_result_to_csv(data_json, tour.get_tournament_name(), bindict[p1], bindict[p2])
                 if p1_score > p2_score:
                     winner_str, loser_str = p1, p2
                     winner_score, loser_score = p1_score, p2_score
