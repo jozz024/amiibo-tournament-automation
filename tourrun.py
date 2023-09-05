@@ -45,6 +45,7 @@ socket_connected = False
 
 async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
+    s.close()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     await load_match(controller_state, True, fp1_tag, fp2_tag)
 
@@ -156,19 +157,28 @@ async def main(tour: Tournament, whole_thing: bool):
             character_name = entry[1]
             trainer_name = entry[2]
 
-            starting_num = 1
 
             name_for_bracket = f"{trainer_name} - {character_name}"
-            while name_for_bracket in entries:
-                starting_num += 1
-                if str(starting_num - 1) == name_for_bracket[-1]:
-                    name_for_bracket = name_for_bracket.replace(starting_num - 1, starting_num)
-                else:
-                    name_for_bracket = f"{name_for_bracket} - {starting_num}"
+            # This variable is the "full name" of sorts,
+            # just has the amiibo's name appended to the end of it
+            full_name = f"{name_for_bracket} - {amiibo_name}"
 
-            entries.append(name_for_bracket)
-            print(name_for_bracket)
-            bindict[name_for_bracket] = validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")
+            # Since duplicates are possible, and we can't have duplicate dictionary keys,
+            # we do a while loop to effectively eliminate all of those
+            while name_for_bracket in bindict:
+                # Get the first duplicate amiibo by it's full name, and then remove the trainer - character name
+                # from the dictionary
+                first_amiibo= bindict[name_for_bracket]
+                bindict.pop(name_for_bracket)
+
+                # After that, we re append the first duplicate amiibo with their full name to the dictionary
+                bindict[first_amiibo["full_name"]] = first_amiibo
+
+                # Once we finish that, we set their bracket name to their full name
+                name_for_bracket = full_name
+
+            # After we finish handling duplicate amiibo, we save the amiibo to the trainer dictionary
+            bindict[name_for_bracket] = {"full_name": full_name, "file_path": validate_filename(f"{trainer_name.rstrip()}-{character_name}-{amiibo_name}")}
 
     print("Finished parsing Submissionapp TSV")
     for entry in entries:
@@ -208,8 +218,8 @@ async def main(tour: Tournament, whole_thing: bool):
                     p1: tour.matches[match_num]["player1_id"],
                     p2: tour.matches[match_num]["player2_id"]
                 }
-                p1_filepath = bindict[p1]
-                p2_filepath = bindict[p2]
+                p1_filepath = bindict[p1]["file_path"]
+                p2_filepath = bindict[p2]["file_path"]
                 tour.mark_in_progress(tour.matches[match_num]["id"])
                 with open(os.path.join("tourbins", p1_filepath + ".bin"), "rb") as fp1_file:
                     fp1_hex = fp1_file.read()
@@ -230,7 +240,7 @@ async def main(tour: Tournament, whole_thing: bool):
                         print(data_json)
                         break
                     if data.decode().startswith("[match_end] One of the fighters is not an amiibo, exiting."):
-                        asyncio.sleep(4)
+                        await asyncio.sleep(4)
                         await restart_match(controller_state, fp1_tag, fp2_tag)
                         continue
                     # except:
@@ -241,7 +251,7 @@ async def main(tour: Tournament, whole_thing: bool):
                 print(score)
                 p1_score = data_json["fp1_info"]["score"]
                 p2_score = data_json["fp2_info"]["score"]
-                match_data.export_result_to_csv(data_json, tour.get_tournament_name(), bindict[p1], bindict[p2])
+                match_data.export_result_to_csv(data_json, tour.get_tournament_name(), bindict[p1]["file_path"], bindict[p2]["file_path"])
                 if p1_score > p2_score:
                     winner_str, loser_str = p1, p2
                     winner_score, loser_score = p1_score, p2_score
