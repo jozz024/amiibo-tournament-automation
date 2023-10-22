@@ -15,6 +15,10 @@ class Tournament():
 
         return participants
 
+    def get_tournament_name(self):
+        tournament_name = self.tournament["name"]
+
+        return tournament_name
     def add_participant(self, name):
         challonge.participants.create(self.tournament["id"], name)
 
@@ -50,4 +54,3 @@ class Tournament():
 
     def mark_in_progress(self, match_id):
         challonge.matches.mark_as_underway(self.tournament["id"], match_id)
-
