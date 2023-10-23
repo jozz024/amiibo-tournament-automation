@@ -337,4 +337,4 @@ if __name__ == "__main__":
         )
     log.configure(console_level=logging.ERROR)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(tour, True))
+    loop.run_until_complete(main(tour))
