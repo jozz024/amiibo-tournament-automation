@@ -153,7 +153,7 @@ def get_runnable_matches(tour: Tournament):
 def get_next_match(tour: Tournament):
     tour.refresh_matches()
     matches = get_runnable_matches(tour)
-    if len(matches=0):
+    if len(matches) == 0 :
         return None
     return matches[0]
 
