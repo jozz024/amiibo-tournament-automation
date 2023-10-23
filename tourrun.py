@@ -213,6 +213,7 @@ async def main(tour: Tournament):
 
                 # Once we finish that, we set their bracket name to their full name
                 name_for_bracket = full_name
+            entries.append(name_for_bracket)
 
             # After we finish handling duplicate amiibo, we save the amiibo to the trainer dictionary
             bindict[name_for_bracket] = {
