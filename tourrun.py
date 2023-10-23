@@ -171,7 +171,7 @@ async def main(tour: Tournament):
     for urls in config["webhook_url"]:
         webhook_list.append(
             webhook.MatchResultWebhoook(
-                urls["url"], config["webhook_name"], config["webhook_avatar_url"]
+                urls["url"], config["webhook_name"], urls["thread_id"], config["webhook_avatar_url"]
             )
         )
 
