@@ -190,10 +190,13 @@ def get_next_match(tour: Tournament):
 
 
 async def handle_tournament_closure(tour, controller_state):
-    tour.end()
-    print()
     await execute(controller_state, "tournament-scripts/exit_to_home_and_close_game")
-    print("Tournament Finished")
+    print()
+    try:
+        tour.end()
+        print("Tournament Finished")
+    except:
+        print("Ran out of matches to do!")
 
 
 async def main(tour: Tournament):
