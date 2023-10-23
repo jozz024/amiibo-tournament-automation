@@ -143,10 +143,41 @@ async def load_match(controller_state, game_start, fp1_tag, fp2_tag):
     await execute(controller_state, "tournament-scripts/start_match")
 
 
+def match_sorting_helper(sort_key, match):
+    if sort_key == 'round':
+        if (match[sort_key] < 0):
+            return abs(match[sort_key]) + 0.5  # Make losers round positive, with a partial increase so it's after the same winners round, but before the next
+
+    return match[sort_key]
+
+def is_in_blacklist(match, blacklist):
+    if blacklist == None:
+        return False
+
+    match_num = match["suggested_play_order"]
+    round_num = match["round"]
+
+    if match_num in blacklist["matches"]["no_group"]:
+        return True
+    if round_num in blacklist["rounds"]:
+        return True
+    return False
+
 def get_runnable_matches(tour: Tournament):
     matches = [match for match in tour.matches if match["state"] == "open"]
+    blacklist = None
     if os.path.exists("./blacklist.json"):
-        pass
+        with open("./blacklist.json") as fp:
+            blacklist = json.load(fp)
+
+    matches = [match for match in matches if not is_in_blacklist(match, blacklist)]
+
+    if os.path.exists("./order.json"):
+        with open("./order.json") as fp:
+            order = json.load(fp)
+    else:
+        order = ["round", "suggested_play_order"]
+    matches.sort(key=(lambda match: ([match_sorting_helper(sort_key, match) for sort_key in order])))
     return matches
 
 
@@ -160,9 +191,9 @@ def get_next_match(tour: Tournament):
 
 async def handle_tournament_closure(tour, controller_state):
     tour.end()
-    print("Tournament Finished")
-
+    print()
     await execute(controller_state, "tournament-scripts/exit_to_home_and_close_game")
+    print("Tournament Finished")
 
 
 async def main(tour: Tournament):
