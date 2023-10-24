@@ -79,9 +79,9 @@ async def send_results(webhook_list, tour: Tournament, winner_data, loser_data):
         with open("./users.json") as fp:
             users = json.load(fp)
         if winner_data["name"] in users:
-            winner_data["name"] = f"<@!{users[winner_data['name']]}"
+            winner_data["name"] = f"<@!{users[winner_data['name']]}>"
         if loser_data["name"] in users:
-            loser_data["name"] = f"<@!{users[loser_data['name']]}"
+            loser_data["name"] = f"<@!{users[loser_data['name']]}>"
     for webhooks in webhook_list:
         while True:
             error = False
