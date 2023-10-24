@@ -74,6 +74,29 @@ def get_player_info(player_str):
     player_info = player_str.split("-")
     return player_info[0].strip(), player_info[1].strip()
 
+async def send_results(webhook_list, tour: Tournament, winner_data, loser_data):
+    if os.path.exists("./users.json"):
+        with open("./users.json") as fp:
+            users = json.load(fp)
+        if winner_data["name"] in users:
+            winner_data["name"] = f"<@!{users[winner_data['name']]}"
+        if loser_data["name"] in users:
+            loser_data["name"] = f"<@!{users[loser_data['name']]}"
+    for webhooks in webhook_list:
+        while True:
+            error = False
+            try:
+                await webhooks.send_result(
+                    f"Running {tour.get_tournament_name()}.\n{winner_data['name']}'s {winner_data['character']} {winner_data['score']}-{loser_data['score']} {loser_data['name']}'s {loser_data['character']}",
+                    get_latest_image(),
+                )
+            except ConnectionResetError:
+                error = True
+                pass
+            if error:
+                time.sleep(2)
+            else:
+                break
 
 def get_latest_image():
     ftp = ftplib.FTP()
@@ -338,21 +361,9 @@ async def main(tour: Tournament):
             await button_push(controller_state, "capture", sec=0.15)
             await execute(controller_state, "tournament-scripts/on_match_end")
             await execute(controller_state, "tournament-scripts/after_match")
-            for webhooks in webhook_list:
-                while True:
-                    error = False
-                    try:
-                        await webhooks.send_result(
-                            f"Running {tour.get_tournament_name()}.\n{winner_name}'s {winner_character} {winner_score}-{loser_score} {loser_name}'s {loser_character}",
-                            get_latest_image(),
-                        )
-                    except ConnectionResetError:
-                        error = True
-                        pass
-                    if error:
-                        time.sleep(2)
-                    else:
-                        break
+            winner_data = {"name": winner_name, "character": winner_character, "score": winner_score}
+            loser_data = {"name": loser_name, "character": loser_character, "score": loser_score}
+            await send_results(webhook_list, tour, winner_data, loser_data)
             await asyncio.sleep(5)
         except IndexError:
             break
