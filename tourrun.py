@@ -250,7 +250,7 @@ async def main(tour: Tournament):
         for entry in entry_tsv:
             amiibo_name = entry[0]
             character_name = entry[1]
-            trainer_name = entry[2]
+            trainer_name = entry[2].strip() # thanks amiibo trainers for adding white space to your submissions
 
             name_for_bracket = f"{trainer_name} - {character_name}"
             # This variable is the "full name" of sorts,
