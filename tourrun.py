@@ -49,6 +49,28 @@ bindict = {}
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_connected = False
 
+def find_discrepancy(bin_list: list[str], amiibo_spreadsheet):
+    for entry in amiibo_spreadsheet:
+            amiibo_name = entry[0]
+            character_name = entry[1]
+            trainer_name = entry[2].strip() # thanks amiibo trainers for adding white space to your submissions
+
+            filename = validate_filename(f"{trainer_name}-{character_name}-{amiibo_name}.bin")
+
+            if not filename in bin_list:
+                # this doesnt account for if the amiibo has a bad name, but that shouldnt happen too often so we should be gucci
+                trainer_name = trainer_name.replace("_", " ")
+
+                real_filename = validate_filename(f"{trainer_name}-{character_name}-{amiibo_name}.bin")
+
+                if not real_filename in bin_list:
+                    continue
+                else:
+                    print(trainer_name)
+                    idx = bin_list.index(real_filename)
+                    bin_list.pop(idx)
+                    bin_list.append(filename)
+                    os.rename(f"tourbins/{real_filename}", f"tourbins/{filename}")
 
 async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
@@ -247,6 +269,7 @@ async def main(tour: Tournament):
         # open the entry tsv submissionapp provides
         entry_tsv = csv.reader(fp, delimiter="\t")
         next(entry_tsv)
+        find_discrepancy(os.listdir("tourbins"), entry_tsv)
         for entry in entry_tsv:
             amiibo_name = entry[0]
             character_name = entry[1]
