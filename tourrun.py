@@ -49,7 +49,7 @@ bindict = {}
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_connected = False
 
-def find_discrepancy(bin_list: list[str], amiibo_spreadsheet):
+def find_discrepancy(bin_list, amiibo_spreadsheet):
     for entry in amiibo_spreadsheet:
             amiibo_name = entry[0]
             character_name = entry[1]
