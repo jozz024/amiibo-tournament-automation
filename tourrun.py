@@ -337,8 +337,13 @@ async def main(tour: Tournament):
             fp2_tag = NFCTag(data=fp2_hex, source=p2_filepath, mutable=True)
             await load_match(controller_state, game_start, fp1_tag, fp2_tag)
             game_start = False
+            printed = False
+            start_time = time.time()
             while True:
                 data = s.recv(1024)
+                now = time.time()
+                if data.decode().startswith("[match_end] Started Set"):
+                    printed = True
                 if data.decode().startswith("[match_end] match_data_json: "):
                     data_json = json.loads(
                         data.decode()
@@ -355,6 +360,13 @@ async def main(tour: Tournament):
                 ):
                     await asyncio.sleep(4)
                     await restart_match(controller_state, fp1_tag, fp2_tag)
+                    continue
+                if (now - start_time) > 15 and printed == False:
+                    await execute(controller_state, "tournament-scripts/exit_to_home_and_close_game")
+                    await asyncio.sleep(4)
+                    await restart_match(controller_state, fp1_tag, fp2_tag)
+                    printed = False
+                    start_time = time.time()
                     continue
             score = (
                 str(data_json["fp1_info"]["score"])
