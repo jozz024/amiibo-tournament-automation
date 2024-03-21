@@ -48,6 +48,7 @@ ip = config["ip"]
 port = "6969"
 bindict = {}
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setblocking(False)
 socket_connected = False
 
 def find_discrepancy(bin_list, amiibo_spreadsheet):
@@ -76,6 +77,7 @@ def find_discrepancy(bin_list, amiibo_spreadsheet):
 async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setblocking(False)
     await load_match(controller_state, True, fp1_tag, fp2_tag)
 
 
@@ -341,27 +343,32 @@ async def main(tour: Tournament):
             printed = False
             start_time = time.time()
             while True:
-                data = s.recv(1024)
+                try:
+                    data = s.recv(1024)
+                    if data.decode().startswith("[match_end] Started Set"):
+                        printed = True
+                    if data.decode().startswith("[match_end] match_data_json: "):
+                        data_json = json.loads(
+                            data.decode()
+                            .strip('[match_end] match_data_json: "')
+                            .strip("\n")
+                            .lstrip()
+                            .replace("\\", "")
+                            .rstrip('"')
+                        )
+                        print(data_json)
+                        break
+                    if data.decode().startswith(
+                        "[match_end] One of the fighters is not an amiibo, exiting."
+                    ):
+                        await asyncio.sleep(4)
+                        await restart_match(controller_state, fp1_tag, fp2_tag)
+                        continue
+                except socket.timeout:
+                    pass
                 now = time.time()
-                if data.decode().startswith("[match_end] Started Set"):
-                    printed = True
-                if data.decode().startswith("[match_end] match_data_json: "):
-                    data_json = json.loads(
-                        data.decode()
-                        .strip('[match_end] match_data_json: "')
-                        .strip("\n")
-                        .lstrip()
-                        .replace("\\", "")
-                        .rstrip('"')
-                    )
-                    print(data_json)
-                    break
-                if data.decode().startswith(
-                    "[match_end] One of the fighters is not an amiibo, exiting."
-                ):
-                    await asyncio.sleep(4)
-                    await restart_match(controller_state, fp1_tag, fp2_tag)
-                    continue
+                print((now-start_time))
+
                 if (now - start_time) > 15 and printed == False:
                     await execute(controller_state, "tournament-scripts/exit_to_home_and_close_game")
                     await asyncio.sleep(4)
