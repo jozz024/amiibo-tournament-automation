@@ -48,7 +48,6 @@ ip = config["ip"]
 port = "6969"
 bindict = {}
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.setblocking(False)
 socket_connected = False
 
 def find_discrepancy(bin_list, amiibo_spreadsheet):
@@ -77,7 +76,7 @@ def find_discrepancy(bin_list, amiibo_spreadsheet):
 async def restart_match(controller_state, fp1_tag, fp2_tag):
     global s
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.setblocking(False)
+
     await load_match(controller_state, True, fp1_tag, fp2_tag)
 
 
@@ -176,6 +175,7 @@ async def load_match(controller_state, game_start, fp1_tag, fp2_tag):
     if game_start == True:
         await execute(controller_state, "tournament-scripts/start_game")
         s.connect((ip, int(port)))
+        s.setblocking(False)
         await asyncio.sleep(18)
         await execute(controller_state, "tournament-scripts/smash_menu")
     else:
