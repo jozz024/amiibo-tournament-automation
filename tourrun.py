@@ -364,7 +364,7 @@ async def main(tour: Tournament):
                         await asyncio.sleep(4)
                         await restart_match(controller_state, fp1_tag, fp2_tag)
                         continue
-                except socket.timeout:
+                except BlockingIOError:
                     pass
                 now = time.time()
                 print((now-start_time))
