@@ -370,6 +370,7 @@ async def main(tour: Tournament):
                 print((now-start_time))
 
                 if (now - start_time) > 15 and printed == False:
+                    await asyncio.sleep(4)
                     await execute(controller_state, "tournament-scripts/exit_to_home_and_close_game")
                     await asyncio.sleep(4)
                     await restart_match(controller_state, fp1_tag, fp2_tag)
