@@ -348,6 +348,7 @@ async def main(tour: Tournament):
                     if data.decode().startswith("[match_end] Started Set"):
                         printed = True
                     if data.decode().startswith("[match_end] match_data_json: "):
+                        print(data.decode())
                         data_json = json.loads(
                             data.decode()
                             .strip('[match_end] match_data_json: "')
