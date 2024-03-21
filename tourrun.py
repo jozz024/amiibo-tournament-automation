@@ -18,6 +18,7 @@ import socket
 import csv
 import match_data
 import time
+from copy import deepcopy
 
 if not os.path.exists("config.json"):
     config = {}
@@ -269,7 +270,7 @@ async def main(tour: Tournament):
         # open the entry tsv submissionapp provides
         entry_tsv = csv.reader(fp, delimiter="\t")
         next(entry_tsv)
-        find_discrepancy(os.listdir("tourbins"), entry_tsv)
+        find_discrepancy(os.listdir("tourbins"), deepcopy(entry_tsv))
         for entry in entry_tsv:
             amiibo_name = entry[0]
             character_name = entry[1]
