@@ -18,6 +18,7 @@ import socket
 import csv
 import match_data
 import time
+import requests
 from copy import deepcopy
 
 if not os.path.exists("config.json"):
@@ -111,7 +112,7 @@ async def send_results(webhook_list, tour: Tournament, winner_data, loser_data):
             error = False
             try:
                 await webhooks.send_result(
-                    f"Running {tour.get_tournament_name()}.\n{winner_data['name']}'s {winner_data['character']} {winner_data['score']}-{loser_data['score']} {loser_data['name']}'s {loser_data['character']}",
+                    f"Running {get_tournament_name(tour)}.\n{winner_data['name']}'s {winner_data['character']} {winner_data['score']}-{loser_data['score']} {loser_data['name']}'s {loser_data['character']}",
                     get_latest_image(),
                 )
             except ConnectionResetError:
@@ -228,14 +229,47 @@ def get_runnable_matches(tour: Tournament):
     matches.sort(key=(lambda match: ([match_sorting_helper(sort_key, match) for sort_key in order])))
     return matches
 
+def try_until_complete(func, *args, **kwargs):
+    failed = True
+    while failed:
+        try:
+            result = func(*args, **kwargs)
+            failed = False
+        except requests.exceptions.ConnectionError:
+            failed = True
+    return result
 
 def get_next_match(tour: Tournament):
-    tour.refresh_matches()
+    def refresh_matches_wrapper(tour: Tournament):
+        tour.refresh_matches()
+
+    try_until_complete(refresh_matches_wrapper, tour)
     matches = get_runnable_matches(tour)
     if len(matches) == 0 :
         return None
     return matches[0]
 
+def set_score(tour: Tournament, match_id, winner_id, score):
+    def set_score_wrapper(tour: Tournament, match_id, winner_id, score):
+        tour.set_score(match_id, winner_id, score)
+    try_until_complete(set_score_wrapper, tour, match_id, winner_id, score)
+
+def get_tournament_name(tour: Tournament):
+    def get_name_wrapper(tour: Tournament):
+        tour.get_tournament_name()
+    name = try_until_complete(get_name_wrapper, tour)
+    return name
+
+def get_user_from_id(tour: Tournament, user_id):
+    def get_user_wrapper(tour: Tournament, user_id):
+        tour.get_user_from_id(user_id)
+    user = try_until_complete(get_user_wrapper, tour, user_id)
+    return user
+
+def mark_in_progress(tour: Tournament, match_id):
+    def mark_wrapper(tour: Tournament, match_id):
+        tour.mark_in_progress(match_id)
+    try_until_complete(mark_wrapper, tour, match_id)
 
 async def handle_tournament_closure(tour, controller_state):
     await execute(controller_state, "tournament-scripts/exit_to_home_and_close_game")
@@ -325,12 +359,12 @@ async def main(tour: Tournament):
             await handle_tournament_closure(tour, controller_state)
             break
         try:
-            p1 = tour.get_user_from_id(match["player1_id"])
-            p2 = tour.get_user_from_id(match["player2_id"])
+            p1 = get_user_from_id(tour, match["player1_id"])
+            p2 = get_user_from_id(tour, match["player2_id"])
             name_to_id = {p1: match["player1_id"], p2: match["player2_id"]}
             p1_filepath = bindict[p1]["file_path"]
             p2_filepath = bindict[p2]["file_path"]
-            tour.mark_in_progress(match["id"])
+            mark_in_progress(tour, match["id"])
             with open(os.path.join("tourbins", p1_filepath + ".bin"), "rb") as fp1_file:
                 fp1_hex = fp1_file.read()
 
@@ -348,7 +382,6 @@ async def main(tour: Tournament):
                     if data.decode().startswith("[match_end] Started Set"):
                         printed = True
                     if data.decode().startswith("[match_end] match_data_json: "):
-                        print(data.decode())
                         data_json = json.loads(
                             data.decode()
                             .strip('[match_end] match_data_json: "')
@@ -357,7 +390,6 @@ async def main(tour: Tournament):
                             .replace("\\", "")
                             .rstrip('"')
                         )
-                        print(data_json)
                         break
                     if data.decode().startswith(
                         "[match_end] One of the fighters is not an amiibo, exiting."
@@ -368,7 +400,6 @@ async def main(tour: Tournament):
                 except BlockingIOError:
                     pass
                 now = time.time()
-                print((now-start_time))
 
                 if (now - start_time) > 15 and printed == False:
                     await asyncio.sleep(4)
@@ -383,7 +414,6 @@ async def main(tour: Tournament):
                 + "-"
                 + str(data_json["fp2_info"]["score"])
             )
-            print(score)
             p1_score = data_json["fp1_info"]["score"]
             p2_score = data_json["fp2_info"]["score"]
             if p1_score > p2_score:
@@ -395,10 +425,10 @@ async def main(tour: Tournament):
             winner_name, winner_character = get_player_info(winner_str)
             loser_name, loser_character = get_player_info(loser_str)
 
-            tour.set_score(match["id"], name_to_id[winner_str], score)
+            set_score(tour, match["id"], name_to_id[winner_str], score)
             match_data.export_result_to_csv(
                 data_json,
-                tour.get_tournament_name(),
+                get_tournament_name(tour),
                 bindict[p1]["file_path"],
                 bindict[p2]["file_path"],
             )
