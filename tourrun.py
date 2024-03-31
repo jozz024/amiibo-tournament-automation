@@ -256,13 +256,13 @@ def set_score(tour: Tournament, match_id, winner_id, score):
 
 def get_tournament_name(tour: Tournament):
     def get_name_wrapper(tour: Tournament):
-        tour.get_tournament_name()
+        return tour.get_tournament_name()
     name = try_until_complete(get_name_wrapper, tour)
     return name
 
 def get_user_from_id(tour: Tournament, user_id):
     def get_user_wrapper(tour: Tournament, user_id):
-        tour.get_user_from_id(user_id)
+        return tour.get_user_from_id(user_id)
     user = try_until_complete(get_user_wrapper, tour, user_id)
     return user
 
