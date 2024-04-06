@@ -237,6 +237,8 @@ def try_until_complete(func, *args, **kwargs):
             failed = False
         except requests.exceptions.ConnectionError:
             failed = True
+        except requests.exceptions.HTTPError:
+            failed = True
     return result
 
 def get_next_match(tour: Tournament):
