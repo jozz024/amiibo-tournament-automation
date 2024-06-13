@@ -105,7 +105,7 @@ async def main(tour: Tournament):
     webhook_list = []
     webhook_list.append(
         webhook.MatchResultWebhoook(
-            conf.thread_data["url"], conf.webhook_data["name"], conf.thread_data["thread_id"], conf.webhook_data["image"]
+            conf.thread_data["url"], conf.webhook_data["name"], conf.thread_data["id"], conf.webhook_data["image"]
         )
     )
 
