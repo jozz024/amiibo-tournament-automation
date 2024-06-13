@@ -90,7 +90,7 @@ async def send_results(webhook_list, tour: Tournament, winner_data, loser_data):
             try:
                 await webhooks.send_result(
                     f"Running {get_tournament_name(tour)}.\n{winner_data['name']}'s {winner_data['character']} {winner_data['score']}-{loser_data['score']} {loser_data['name']}'s {loser_data['character']}",
-                    get_latest_image(),
+                    get_latest_image(conf.ip),
                 )
             except ConnectionResetError:
                 error = True
@@ -221,7 +221,7 @@ async def main(tour: Tournament):
                     pass
                 now = time.time()
 
-                if (now - start_time) > 15 and printed == False:
+                if (now - start_time) > 30 and printed == False:
                     await asyncio.sleep(4)
                     await execute(controller_state, "tournament-scripts/exit_to_home_and_close_game")
                     await asyncio.sleep(4)
@@ -255,12 +255,12 @@ async def main(tour: Tournament):
             await asyncio.sleep(5)
             await button_push(controller_state, "capture", sec=0.15)
             await asyncio.sleep(2)
-            img: io.BytesIO = get_latest_image()
+            img: io.BytesIO = get_latest_image(conf.ip)
             if previous_image != None:
                 while img.getvalue() == previous_image.getvalue():
                     await button_push(controller_state, "capture", sec=0.15)
                     await asyncio.sleep(2)
-                    img: io.BytesIO = get_latest_image()
+                    img: io.BytesIO = get_latest_image(conf.ip)
             await execute(controller_state, "tournament-scripts/on_match_end")
             await execute(controller_state, "tournament-scripts/after_match")
             winner_data = {"name": winner_name, "character": winner_character, "score": winner_score}
