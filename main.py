@@ -158,7 +158,7 @@ async def main(tour: Tournament):
         bin_dictionary[name_for_bracket] = {
             "full_name": full_name,
             "file_path": validate_filename(
-                f"{trainer_name.replace("_", " ").rstrip()}-{character_name}-{amiibo_name}.bin"
+                f"{trainer_name.replace('_', '_').rstrip()}-{character_name}-{amiibo_name}.bin"
             ),
         }
 

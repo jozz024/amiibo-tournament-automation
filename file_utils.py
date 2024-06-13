@@ -60,7 +60,7 @@ def find_bins_in_folder(entry_tsv):
         trainer_name: str= entry[2].strip() # thanks amiibo trainers for adding white space to your submissions
 
         filename = validate_filename(
-                    f"{trainer_name.replace("_", " ").rstrip()}-{character_name}-{amiibo_name}.bin"
+                    f"{trainer_name.replace('_', ' ').rstrip()}-{character_name}-{amiibo_name}.bin"
                 )
 
         if filename in os.listdir("./tourbins"):
