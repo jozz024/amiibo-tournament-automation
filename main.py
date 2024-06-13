@@ -23,7 +23,7 @@ import match_data
 import csv
 
 conf = config.Config()
-ip = conf["ip"]
+ip = conf.ip
 port = "6969"
 bin_dictionary = {} # Dictionary for storing bins connected to their challonge counterpart
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
