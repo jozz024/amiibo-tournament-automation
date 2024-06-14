@@ -273,7 +273,7 @@ def mark_in_progress(tour: Tournament, match_id):
         tour.mark_in_progress(match_id)
     try_until_complete(mark_wrapper, tour, match_id)
 
-async def handle_tournament_closure(tour, controller_state):
+async def handle_tournament_closure(tour: Tournament, controller_state):
     await execute(controller_state, "tournament-scripts/exit_to_home_and_close_game")
     print()
     try:
@@ -308,6 +308,7 @@ async def main(tour: Tournament):
         # open the entry tsv submissionapp provides
         entry_tsv = csv.reader(fp, delimiter="\t")
         next(entry_tsv)
+        
         # find_discrepancy(os.listdir("tourbins"), entry_tsv)
         for entry in entry_tsv:
             amiibo_name = entry[0]
@@ -397,6 +398,7 @@ async def main(tour: Tournament):
                         "[match_end] One of the fighters is not an amiibo, exiting."
                     ):
                         await asyncio.sleep(4)
+                        printed = False
                         await restart_match(controller_state, fp1_tag, fp2_tag)
                         continue
                 except BlockingIOError:

@@ -215,6 +215,7 @@ async def main(tour: Tournament):
                         break
                     if "[match_end] One of the fighters is not an amiibo, exiting." in data.decode():
                         await asyncio.sleep(4)
+                        printed = False
                         await restart_match(controller_state, fp1_tag, fp2_tag)
                         continue
                 except BlockingIOError:
